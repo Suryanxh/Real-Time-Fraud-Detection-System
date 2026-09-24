@@ -1,0 +1,782 @@
+[
+  {
+    "transaction_id": "txn_000000",
+    "amount": 11.5,
+    "timestamp": "2024-01-01 17:01:30",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2052.398204803467
+  },
+  {
+    "transaction_id": "txn_000001",
+    "amount": 1.94,
+    "timestamp": "2024-01-02 19:09:54",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2098.078966140747
+  },
+  {
+    "transaction_id": "txn_000002",
+    "amount": 91.28,
+    "timestamp": "2024-01-01 08:34:41",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2069.739818572998
+  },
+  {
+    "transaction_id": "txn_000003",
+    "amount": 228.0,
+    "timestamp": "2024-01-01 14:46:43",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2039.4067764282227
+  },
+  {
+    "transaction_id": "txn_000004",
+    "amount": 1.41,
+    "timestamp": "2024-01-02 11:57:09",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2049.712896347046
+  },
+  {
+    "transaction_id": "txn_000005",
+    "amount": 20.99,
+    "timestamp": "2024-01-01 18:00:16",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.438539505005
+  },
+  {
+    "transaction_id": "txn_000006",
+    "amount": 234.9,
+    "timestamp": "2024-01-01 07:40:50",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2036.468267440796
+  },
+  {
+    "transaction_id": "txn_000007",
+    "amount": 21.44,
+    "timestamp": "2024-01-01 07:38:05",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2054.701805114746
+  },
+  {
+    "transaction_id": "txn_000008",
+    "amount": 20.0,
+    "timestamp": "2024-01-02 06:57:13",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2050.6198406219482
+  },
+  {
+    "transaction_id": "txn_000009",
+    "amount": 59.82,
+    "timestamp": "2024-01-02 14:33:39",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2184.9193572998047
+  },
+  {
+    "transaction_id": "txn_000010",
+    "amount": 0.99,
+    "timestamp": "2024-01-01 15:14:47",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2049.135684967041
+  },
+  {
+    "transaction_id": "txn_000011",
+    "amount": 1684.35,
+    "timestamp": "2024-01-01 16:31:28",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2053.2095432281494
+  },
+  {
+    "transaction_id": "txn_000012",
+    "amount": 45.0,
+    "timestamp": "2024-01-02 10:33:40",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2052.564859390259
+  },
+  {
+    "transaction_id": "txn_000013",
+    "amount": 1.98,
+    "timestamp": "2024-01-02 15:44:25",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2066.54953956604
+  },
+  {
+    "transaction_id": "txn_000014",
+    "amount": 10.0,
+    "timestamp": "2024-01-01 09:41:55",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2068.537473678589
+  },
+  {
+    "transaction_id": "txn_000015",
+    "amount": 177.52,
+    "timestamp": "2024-01-01 19:41:43",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2064.6612644195557
+  },
+  {
+    "transaction_id": "txn_000016",
+    "amount": 147.07,
+    "timestamp": "2024-01-02 11:17:26",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2057.5711727142334
+  },
+  {
+    "transaction_id": "txn_000017",
+    "amount": 18.5,
+    "timestamp": "2024-01-02 21:22:52",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.058261871338
+  },
+  {
+    "transaction_id": "txn_000018",
+    "amount": 2.25,
+    "timestamp": "2024-01-02 09:21:59",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2092.7481651306152
+  },
+  {
+    "transaction_id": "txn_000019",
+    "amount": 15.95,
+    "timestamp": "2024-01-01 03:03:20",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2062.2267723083496
+  },
+  {
+    "transaction_id": "txn_000020",
+    "amount": 39.0,
+    "timestamp": "2024-01-01 04:01:05",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2053.227186203003
+  },
+  {
+    "transaction_id": "txn_000021",
+    "amount": 12.95,
+    "timestamp": "2024-01-02 18:24:23",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2089.8852348327637
+  },
+  {
+    "transaction_id": "txn_000022",
+    "amount": 205.0,
+    "timestamp": "2024-01-02 23:28:42",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2272.533893585205
+  },
+  {
+    "transaction_id": "txn_000023",
+    "amount": 922.02,
+    "timestamp": "2024-01-02 16:28:47",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2076.7431259155273
+  },
+  {
+    "transaction_id": "txn_000024",
+    "amount": 11.01,
+    "timestamp": "2024-01-01 10:01:42",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2074.138879776001
+  },
+  {
+    "transaction_id": "txn_000025",
+    "amount": 101.17,
+    "timestamp": "2024-01-02 20:16:31",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2045.7091331481934
+  },
+  {
+    "transaction_id": "txn_000026",
+    "amount": 5.38,
+    "timestamp": "2024-01-01 17:55:56",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2064.6822452545166
+  },
+  {
+    "transaction_id": "txn_000027",
+    "amount": 4.49,
+    "timestamp": "2024-01-02 23:01:57",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2067.6701068878174
+  },
+  {
+    "transaction_id": "txn_000028",
+    "amount": 88.5,
+    "timestamp": "2024-01-02 15:08:38",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2049.7376918792725
+  },
+  {
+    "transaction_id": "txn_000029",
+    "amount": 10.17,
+    "timestamp": "2024-01-01 18:12:08",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2103.98006439209
+  },
+  {
+    "transaction_id": "txn_000030",
+    "amount": 40.1,
+    "timestamp": "2024-01-02 18:29:43",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2192.615032196045
+  },
+  {
+    "transaction_id": "txn_000031",
+    "amount": 18.4,
+    "timestamp": "2024-01-01 23:39:47",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2071.176767349243
+  },
+  {
+    "transaction_id": "txn_000032",
+    "amount": 8.0,
+    "timestamp": "2024-01-01 17:03:32",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2072.193145751953
+  },
+  {
+    "transaction_id": "txn_000033",
+    "amount": 36.71,
+    "timestamp": "2024-01-01 09:56:10",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2089.2081260681152
+  },
+  {
+    "transaction_id": "txn_000034",
+    "amount": 75.5,
+    "timestamp": "2024-01-02 15:53:31",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2043.1029796600342
+  },
+  {
+    "transaction_id": "txn_000035",
+    "amount": 19.0,
+    "timestamp": "2024-01-01 03:21:25",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2037.0800495147705
+  },
+  {
+    "transaction_id": "txn_000036",
+    "amount": 20.0,
+    "timestamp": "2024-01-01 10:32:14",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2139.756441116333
+  },
+  {
+    "transaction_id": "txn_000037",
+    "amount": 12.06,
+    "timestamp": "2024-01-01 12:49:46",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2039.2687320709229
+  },
+  {
+    "transaction_id": "txn_000038",
+    "amount": 4.64,
+    "timestamp": "2024-01-01 07:43:21",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2051.3248443603516
+  },
+  {
+    "transaction_id": "txn_000039",
+    "amount": 7.99,
+    "timestamp": "2024-01-01 12:29:57",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2061.0103607177734
+  },
+  {
+    "transaction_id": "txn_000040",
+    "amount": 340.32,
+    "timestamp": "2024-01-01 11:00:49",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2094.9411392211914
+  },
+  {
+    "transaction_id": "txn_000041",
+    "amount": 19.99,
+    "timestamp": "2024-01-01 00:40:57",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2051.7947673797607
+  },
+  {
+    "transaction_id": "txn_000042",
+    "amount": 9.99,
+    "timestamp": "2024-01-01 22:21:22",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2053.333044052124
+  },
+  {
+    "transaction_id": "txn_000043",
+    "amount": 10.2,
+    "timestamp": "2024-01-01 22:08:10",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2088.036060333252
+  },
+  {
+    "transaction_id": "txn_000044",
+    "amount": 17.05,
+    "timestamp": "2024-01-01 08:39:41",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2038.1996631622314
+  },
+  {
+    "transaction_id": "txn_000045",
+    "amount": 9.85,
+    "timestamp": "2024-01-02 23:31:56",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2394.047975540161
+  },
+  {
+    "transaction_id": "txn_000046",
+    "amount": 10.0,
+    "timestamp": "2024-01-01 09:49:32",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2079.8492431640625
+  },
+  {
+    "transaction_id": "txn_000047",
+    "amount": 354.87,
+    "timestamp": "2024-01-01 13:52:33",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2055.7215213775635
+  },
+  {
+    "transaction_id": "txn_000048",
+    "amount": 29.85,
+    "timestamp": "2024-01-02 11:05:04",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.425188064575
+  },
+  {
+    "transaction_id": "txn_000049",
+    "amount": 5.51,
+    "timestamp": "2024-01-02 17:18:16",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2060.136079788208
+  },
+  {
+    "transaction_id": "txn_000050",
+    "amount": 2.28,
+    "timestamp": "2024-01-02 20:19:13",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2075.4454135894775
+  },
+  {
+    "transaction_id": "txn_000051",
+    "amount": 118.0,
+    "timestamp": "2024-01-01 19:35:49",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2373.586654663086
+  },
+  {
+    "transaction_id": "txn_000052",
+    "amount": 23.49,
+    "timestamp": "2024-01-01 18:21:47",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2067.7084922790527
+  },
+  {
+    "transaction_id": "txn_000053",
+    "amount": 23.99,
+    "timestamp": "2024-01-01 11:59:59",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2070.974826812744
+  },
+  {
+    "transaction_id": "txn_000054",
+    "amount": 437.17,
+    "timestamp": "2024-01-01 01:00:37",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2223.3071327209473
+  },
+  {
+    "transaction_id": "txn_000055",
+    "amount": 1.9,
+    "timestamp": "2024-01-01 10:26:24",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2089.0698432922363
+  },
+  {
+    "transaction_id": "txn_000056",
+    "amount": 19.59,
+    "timestamp": "2024-01-02 23:59:20",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2068.64333152771
+  },
+  {
+    "transaction_id": "txn_000057",
+    "amount": 250.0,
+    "timestamp": "2024-01-01 12:24:36",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2297.4815368652344
+  },
+  {
+    "transaction_id": "txn_000058",
+    "amount": 248.08,
+    "timestamp": "2024-01-01 08:04:28",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2060.168504714966
+  },
+  {
+    "transaction_id": "txn_000059",
+    "amount": 7.7,
+    "timestamp": "2024-01-01 12:13:35",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.3584308624268
+  },
+  {
+    "transaction_id": "txn_000060",
+    "amount": 1.98,
+    "timestamp": "2024-01-02 18:19:12",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2069.4267749786377
+  },
+  {
+    "transaction_id": "txn_000061",
+    "amount": 0.0,
+    "timestamp": "2024-01-02 10:03:01",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.4681034088135
+  },
+  {
+    "transaction_id": "txn_000062",
+    "amount": 9.99,
+    "timestamp": "2024-01-01 12:01:44",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2065.6673908233643
+  },
+  {
+    "transaction_id": "txn_000063",
+    "amount": 28.72,
+    "timestamp": "2024-01-02 16:51:24",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2101.0661125183105
+  },
+  {
+    "transaction_id": "txn_000064",
+    "amount": 50.01,
+    "timestamp": "2024-01-01 20:23:42",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2058.136224746704
+  },
+  {
+    "transaction_id": "txn_000065",
+    "amount": 11.15,
+    "timestamp": "2024-01-02 15:09:57",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2079.2312622070312
+  },
+  {
+    "transaction_id": "txn_000066",
+    "amount": 1.29,
+    "timestamp": "2024-01-02 16:07:46",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2061.7966651916504
+  },
+  {
+    "transaction_id": "txn_000067",
+    "amount": 1.54,
+    "timestamp": "2024-01-02 17:51:07",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2028.6109447479248
+  },
+  {
+    "transaction_id": "txn_000068",
+    "amount": 18.78,
+    "timestamp": "2024-01-02 23:10:37",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2067.34037399292
+  },
+  {
+    "transaction_id": "txn_000069",
+    "amount": 54.24,
+    "timestamp": "2024-01-02 22:19:20",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2047.868251800537
+  },
+  {
+    "transaction_id": "txn_000070",
+    "amount": 8.73,
+    "timestamp": "2024-01-02 17:31:52",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2043.1606769561768
+  },
+  {
+    "transaction_id": "txn_000071",
+    "amount": 0.99,
+    "timestamp": "2024-01-02 18:46:57",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2098.820209503174
+  },
+  {
+    "transaction_id": "txn_000072",
+    "amount": 274.08,
+    "timestamp": "2024-01-01 13:52:41",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2048.5756397247314
+  },
+  {
+    "transaction_id": "txn_000073",
+    "amount": 15.41,
+    "timestamp": "2024-01-02 10:46:43",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2031.9411754608154
+  },
+  {
+    "transaction_id": "txn_000074",
+    "amount": 5.37,
+    "timestamp": "2024-01-02 00:17:51",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2042.252540588379
+  },
+  {
+    "transaction_id": "txn_000075",
+    "amount": 1.49,
+    "timestamp": "2024-01-01 20:18:39",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2052.741050720215
+  },
+  {
+    "transaction_id": "txn_000076",
+    "amount": 716.88,
+    "timestamp": "2024-01-02 09:38:26",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2029.9992561340332
+  },
+  {
+    "transaction_id": "txn_000077",
+    "amount": 54.0,
+    "timestamp": "2024-01-01 21:34:34",
+    "fraud_probability": 0,
+    "decision": "flag",
+    "is_fraud_actual": false,
+    "is_fraud_predicted": false,
+    "latency_ms": 2061.5625381469727
+  }
+]

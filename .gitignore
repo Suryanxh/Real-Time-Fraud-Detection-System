@@ -1,0 +1,10 @@
+.env
+venv/
+node_modules/
+__pycache__/
+.idea/
+.vscode/
+*.pyc
+.ipynb_checkpoints/
+data/raw/*.csv
+data/processed/*.csv
