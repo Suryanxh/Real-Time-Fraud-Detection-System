@@ -8,19 +8,20 @@ spec expects them, and your feature list (device/IP frequency, merchant risk)
 needs them to mean anything.
 
 So this module does two jobs:
-  1. synthesize_entity_fields()  -- generates plausible merchant/device_id/ip
-     values so the rest of the pipeline (and your API payloads) work end-to-end
-     for the demo. This is a POC-only step -- in production these fields come
-     from the real transaction event, you would NOT synthesize them.
-  2. engineer_features()          -- computes the actual model features from
-     amount, time, and those (real or synthetic) identity fields.
+  1. synthesize_entity_fields()  -- generates demo-only merchant/device_id/ip
+     values independently of fraud labels.
+  2. engineer_features()          -- computes model features from amount,
+     time, and those (real or synthetic) identity fields.
 
 Usage:
     from src.features import synthesize_entity_fields, engineer_features
 
     df = synthesize_entity_fields(df, seed=42)
-    train_feats, merchant_risk_map = engineer_features(df_train, is_train=True)
-    test_feats, _ = engineer_features(df_test, is_train=False, merchant_risk_map=merchant_risk_map)
+    train_feats, merchant_risk_map, global_rate = engineer_features(df_train, is_train=True)
+    test_feats, _, _ = engineer_features(
+        df_test, is_train=False, merchant_risk_map=merchant_risk_map,
+        global_fraud_rate=global_rate,
+    )
 """
 
 import numpy as np
@@ -36,50 +37,25 @@ def synthesize_entity_fields(df: pd.DataFrame, seed: int = 42) -> pd.DataFrame:
     """
     Adds synthetic 'merchant', 'device_id', 'ip', and 'timestamp' columns.
 
-    Design choices, so the synthetic data is at least *directionally* realistic:
-      - A small pool of devices/IPs is reused across many transactions (real
-        fraud rings reuse infrastructure) rather than one unique ID per row.
-      - Fraud rows are biased toward a smaller sub-pool of devices/IPs/merchants,
-        so velocity and frequency features actually have signal to learn from
-        instead of being pure noise.
+    A small pool of entities is reused so velocity/frequency features can be
+    demonstrated. Values are sampled independently of the fraud labels.
     """
     rng = np.random.default_rng(seed)
     df = df.copy()
     n = len(df)
-    is_fraud = df["Class"].values.astype(bool)
-
     # Real timestamp from the 'Time' column (seconds since first transaction)
     df["timestamp"] = BASE_TIMESTAMP + pd.to_timedelta(df["Time"], unit="s")
 
-    # Device/IP pools: fraud transactions draw from a much smaller pool,
-    # simulating reused devices/IPs in fraud rings.
+    # Reuse entities without using labels to assign them.
     normal_devices = [f"dev_{i:05d}" for i in range(3000)]
-    fraud_devices = [f"dev_{i:05d}" for i in range(3000, 3050)]  # small reused pool
     normal_ips = [f"ip_{i:05d}" for i in range(2500)]
-    fraud_ips = [f"ip_{i:05d}" for i in range(2500, 2540)]
+    device_id = rng.choice(normal_devices, size=n)
+    ip = rng.choice(normal_ips, size=n)
 
-    device_id = np.where(
-        is_fraud,
-        rng.choice(fraud_devices, size=n),
-        rng.choice(normal_devices, size=n),
-    )
-    ip = np.where(
-        is_fraud,
-        rng.choice(fraud_ips, size=n),
-        rng.choice(normal_ips, size=n),
-    )
-
-    # Merchant categories with different baseline risk (mirrors real-world
-    # patterns: electronics/gift cards see more fraud than groceries).
+    # Merchant categories are assigned independently of fraud labels.
     merchants = ["grocery", "electronics", "travel", "gift_cards", "clothing", "utilities"]
-    merchant_weights_normal = [0.30, 0.15, 0.10, 0.05, 0.25, 0.15]
-    merchant_weights_fraud = [0.05, 0.35, 0.15, 0.30, 0.10, 0.05]
-
-    merchant = np.where(
-        is_fraud,
-        rng.choice(merchants, size=n, p=merchant_weights_fraud),
-        rng.choice(merchants, size=n, p=merchant_weights_normal),
-    )
+    merchant_weights = [0.30, 0.15, 0.10, 0.05, 0.25, 0.15]
+    merchant = rng.choice(merchants, size=n, p=merchant_weights)
 
     df["device_id"] = device_id
     df["ip"] = ip
@@ -121,7 +97,7 @@ def add_velocity_features(df: pd.DataFrame, entity_col: str = "device_id") -> pd
     Causality: pandas' time-based rolling window for a row at time t only ever
     looks at [t - 60min, t] -- it physically cannot see future rows. That's
     what makes this safe to compute the same way on train and test/live data,
-    unlike the merchant risk score below.
+    unlike the merchant base-rate feature below.
     """
     df = df.sort_values([entity_col, "timestamp"]).copy()
     indexed = df.set_index("timestamp")
@@ -157,7 +133,7 @@ def add_entity_frequency(df: pd.DataFrame, entity_col: str) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# 5. Merchant risk score -- historical fraud rate per merchant category
+# 5. Merchant risk score -- neutral base rate for unavailable merchant data
 # ---------------------------------------------------------------------------
 def add_merchant_risk(
     df: pd.DataFrame,
@@ -166,21 +142,18 @@ def add_merchant_risk(
     global_fraud_rate: float | None = None,
 ):
     """
-    Target-encodes 'merchant' as its historical fraud rate.
+    Uses the training-set fraud base rate for every merchant.
 
-    LEAKAGE WARNING -- this is the one feature in this module where causality
-    isn't automatic:
-      - On TRAIN: the risk map is *fit* here, using only training labels.
-      - On TEST/LIVE: you must pass in the map fit on train (never recompute
-        it from test data, and never let the model see test labels here).
-      - Unseen merchants at inference time fall back to the global fraud rate
-        rather than crashing or silently becoming NaN.
+    The source dataset has no real merchant risk information. Per-merchant
+    label averages would leak labels into the training features.
     """
     df = df.copy()
 
     if is_train:
-        merchant_risk_map = df.groupby("merchant")["Class"].mean().to_dict()
         global_fraud_rate = df["Class"].mean()
+        merchant_risk_map = {
+            merchant: global_fraud_rate for merchant in df["merchant"].unique()
+        }
     else:
         if merchant_risk_map is None or global_fraud_rate is None:
             raise ValueError(
@@ -264,9 +237,8 @@ if __name__ == "__main__":
     print("\nSaved to data/processed/train_features.csv and test_features.csv")
 
     # ---- Persist artifacts api.py needs at live-scoring time ----------------
-    # merchant_risk_map/global_fraud_rate were fit on TRAIN ONLY (see
-    # add_merchant_risk's leakage warning) -- api.py must reuse these exact
-    # values for every live transaction, never recompute them.
+    # Merchant risk is a constant base rate because the source dataset has no
+    # real merchant risk information.
     import json
     import os
 

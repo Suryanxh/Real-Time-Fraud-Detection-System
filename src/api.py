@@ -31,7 +31,10 @@ import joblib
 import numpy as np
 import pandas as pd
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+
+from src.features import BASE_TIMESTAMP
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("fraud-api")
@@ -132,7 +135,7 @@ def build_feature_vector(txn: Transaction) -> pd.DataFrame:
     for i in range(1, 29):
         row[f"V{i}"] = txn.features.get(f"V{i}", 0.0) if txn.features else 0.0
 
-    row["Time"] = ts.timestamp()  # not meaningful across restarts, mirrors training column
+    row["Time"] = (ts - BASE_TIMESTAMP).total_seconds()
     row["Amount"] = txn.amount
     row["amount_log"] = np.log1p(txn.amount)
 
@@ -202,6 +205,14 @@ def generate_reason(feature_row: pd.DataFrame) -> str:
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Fraud Detection Scoring API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 
 @app.get("/health")

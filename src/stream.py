@@ -3,8 +3,8 @@ Streaming replay: simulates live transaction events from test data.
 
 Reads transactions from data/processed/test_features.csv (ground truth dataset),
 extracts them one-by-one with a configurable delay, and sends them to the
-FastAPI /score endpoint. Tracks fraud predictions, false positives, false
-negatives, and updates running metrics.
+FastAPI /score endpoint over HTTP. This is a demo replay, not a Kafka consumer.
+Tracks fraud predictions, false positives, false negatives, and API latency.
 
 Useful for:
 - Live testing the API with realistic transaction patterns
@@ -21,12 +21,11 @@ Run:
 
 import json
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pandas as pd
 import requests
-from collections import defaultdict
 
 
 # ---------------------------------------------------------------------------
@@ -37,17 +36,12 @@ API_BASE_URL = "http://localhost:8000"
 SCORE_ENDPOINT = f"{API_BASE_URL}/score"
 HEALTH_ENDPOINT = f"{API_BASE_URL}/health"
 
-# Delay between events (seconds). Set to 0 for instant replay, or 0.5-1.0
-# for realistic pacing.
-EVENT_DELAY = 0.01  # 100 ms between transactions
+# Delay between events (seconds), paced slowly enough to follow in the demo.
+EVENT_DELAY = 0.5
 
-# Subset size (for quick testing). Use 0 or None to replay entire dataset.
-# Set to 100 for a quick 10-second test, 1000 for ~100 seconds, etc.
-LIMIT_ROWS = None  # None = full dataset; int = limit
-
-# Decision thresholds (should match API's model_metrics.json)
-BLOCK_THRESHOLD = 0.9995
-REVIEW_THRESHOLD = 0.7995
+# Keep the default replay short and balanced for a live demo. Set to None to
+# replay the full test set.
+LIMIT_ROWS = 50
 
 
 # ---------------------------------------------------------------------------
@@ -64,17 +58,18 @@ class StreamMetrics:
         self.false_negatives = 0  # legit predicted, actually fraud
         self.blocked_count = 0  # high confidence fraud
         self.review_count = 0  # medium confidence fraud
+        self.allowed_count = 0
+        self.failed_events = 0
         self.latencies = []  # API response times
         self.decision_log = []
 
     def record_decision(self, decision: dict):
         """Record a single decision and update metrics."""
         self.total_events += 1
-        
+
         is_fraud_actual = decision["is_fraud_actual"]
         is_fraud_predicted = decision["is_fraud_predicted"]
-        fraud_probability = decision["fraud_probability"]
-        
+
         # Update confusion matrix
         if is_fraud_predicted and is_fraud_actual:
             self.true_positives += 1
@@ -84,17 +79,19 @@ class StreamMetrics:
             self.false_negatives += 1
         else:
             self.true_negatives += 1
-        
-        # Update action counts
-        if fraud_probability >= BLOCK_THRESHOLD:
+
+        # Use the API's decision directly so replay metrics follow its thresholds.
+        if decision["decision"] == "block":
             self.blocked_count += 1
-        elif fraud_probability >= REVIEW_THRESHOLD:
+        elif decision["decision"] == "flag":
             self.review_count += 1
-        
+        elif decision["decision"] == "allow":
+            self.allowed_count += 1
+
         # Track latency
         if "latency_ms" in decision:
             self.latencies.append(decision["latency_ms"])
-        
+
         self.decision_log.append(decision)
 
     def print_summary(self):
@@ -120,10 +117,11 @@ class StreamMetrics:
         
         # Action distribution
         print(f"\nACTIONS:")
-        print(f"  Blocked (p>={BLOCK_THRESHOLD}):       {self.blocked_count:5d}")
-        print(f"  Flagged (p>={REVIEW_THRESHOLD}):        {self.review_count:5d}")
-        print(f"  Allowed:                      {self.total_events - self.blocked_count - self.review_count:5d}")
-        
+        print(f"  Blocked:                      {self.blocked_count:5d}")
+        print(f"  Flagged:                      {self.review_count:5d}")
+        print(f"  Allowed:                      {self.allowed_count:5d}")
+        print(f"  Failed requests:              {self.failed_events:5d}")
+
         # Latency stats
         if self.latencies:
             avg_latency = sum(self.latencies) / len(self.latencies)
@@ -133,7 +131,7 @@ class StreamMetrics:
             print(f"  Min:     {min_latency:.1f}")
             print(f"  Avg:     {avg_latency:.1f}")
             print(f"  Max:     {max_latency:.1f}")
-        
+
         print("=" * 70)
 
     def save_decision_log(self, filepath: str = "models/stream_decisions.json"):
@@ -147,11 +145,35 @@ class StreamMetrics:
 # Stream replay
 # ---------------------------------------------------------------------------
 def load_test_data(limit: int | None = None) -> pd.DataFrame:
-    """Load test features CSV and optionally limit rows."""
+    """Load a chronological demo sample with both classes, or the full dataset."""
     df = pd.read_csv(TEST_DATA_PATH)
-    if limit:
-        df = df.head(limit)
-    return df
+    if limit is None:
+        return df.sort_values("timestamp").reset_index(drop=True)
+    if limit <= 0:
+        return df.iloc[0:0].copy()
+
+    # Labels select a representative demo mix only; they are sent as separate
+    # evaluation metadata and are not model inputs.
+    fraud_count = min((limit + 1) // 2, int((df["Class"] == 1).sum()))
+    legitimate_count = min(limit - fraud_count, int((df["Class"] == 0).sum()))
+    fraud = df[df["Class"] == 1].sample(n=fraud_count, random_state=42)
+    legitimate_pool = df[df["Class"] == 0]
+    flagged_demo = legitimate_pool.nlargest(1, "Amount")
+    other_legitimate = legitimate_pool.drop(index=flagged_demo.index)
+    legitimate = pd.concat(
+        [
+            flagged_demo,
+            other_legitimate.sample(
+                n=legitimate_count - len(flagged_demo),
+                random_state=42,
+            ),
+        ]
+    )
+    return (
+        pd.concat([fraud, legitimate])
+        .sort_values("timestamp")
+        .reset_index(drop=True)
+    )
 
 
 def wait_for_api(max_retries: int = 10, delay: float = 1.0):
@@ -184,15 +206,16 @@ def stream_transactions(df: pd.DataFrame, metrics: StreamMetrics):
     
     start_time = time.time()
     
-    for idx, row in df.iterrows():
+    for row_number, (_, row) in enumerate(df.iterrows(), start=1):
         # Build request payload (matches Transaction schema in api.py)
         payload = {
-            "transaction_id": f"txn_{idx:06d}",
+            "transaction_id": f"txn_{row_number:06d}",
             "amount": float(row["Amount"]),
             "merchant": row.get("merchant", "unknown"),
             "device_id": row.get("device_id", "dev_unknown"),
             "ip": row.get("ip", "ip_unknown"),
-            "timestamp": row.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "timestamp": str(row.get("timestamp", datetime.now(timezone.utc).isoformat())),
+            "true_label": int(row["Class"]) if "Class" in row.index else None,
             # Include V1-V28 (POC-only extension, per api.py docstring)
             "features": {
                 col: float(row[col])
@@ -209,41 +232,42 @@ def stream_transactions(df: pd.DataFrame, metrics: StreamMetrics):
             
             if resp.status_code == 200:
                 result = resp.json()
-                
+                api_decision = str(result["decision"]).lower()
+                fraud_score = float(result["fraud_score"])
+
                 # Build decision record
                 decision = {
                     "transaction_id": payload["transaction_id"],
                     "amount": payload["amount"],
                     "timestamp": payload["timestamp"],
-                    "fraud_probability": result.get("fraud_probability", 0),
-                    "decision": result.get("decision", "unknown"),
-                    "is_fraud_actual": int(row.get("Class", 0)) == 1,
-                    "is_fraud_predicted": result.get("decision") in ["BLOCK", "REVIEW"],
+                    "fraud_score": fraud_score,
+                    "decision": api_decision,
+                    "is_fraud_actual": payload["true_label"] == 1,
+                    "is_fraud_predicted": api_decision in ("block", "flag"),
                     "latency_ms": latency_ms,
                 }
-                
+
                 metrics.record_decision(decision)
-                
-                # Print running updates every 100 transactions
-                if (idx + 1) % 100 == 0:
-                    elapsed = time.time() - start_time
-                    rate = (idx + 1) / elapsed
-                    print(
-                        f"[{idx + 1:6d}] "
-                        f"{decision['decision']:6s} "
-                        f"(p={decision['fraud_probability']:.4f}) "
-                        f"actual={decision['is_fraud_actual']} "
-                        f"{rate:.1f} tx/sec"
-                    )
+                print(
+                    f"[{row_number:3d}/{len(df)}] "
+                    f"{decision['transaction_id']} "
+                    f"amount=${decision['amount']:.2f} "
+                    f"score={fraud_score:.4f} "
+                    f"decision={api_decision} "
+                    f"actual_fraud={int(decision['is_fraud_actual'])} "
+                    f"latency={latency_ms:.1f}ms"
+                )
             else:
+                metrics.failed_events += 1
                 print(f"[FAIL] Request failed (status {resp.status_code}): {resp.text}")
-        
+
         except requests.RequestException as e:
+            metrics.failed_events += 1
             print(f"[ERROR] Request error: {e}")
-        
+
         # Sleep before next event
         time.sleep(EVENT_DELAY)
-    
+
     elapsed = time.time() - start_time
     print(f"\nReplay complete in {elapsed:.1f} seconds")
 

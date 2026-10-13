@@ -16,8 +16,8 @@ fraud-detection-System/
 │   ├── features.py       # Feature engineering
 │   ├── train.py          # Model training
 │   ├── api.py            # REST API (FastAPI)
-│   ├── stream.py         # Real-time streaming (Kafka)
-│   └── dashboard.py      # Monitoring dashboard (Streamlit)
+│   └── stream.py         # Labeled transaction replay into the API (HTTP)
+├── frontend/             # React monitoring dashboard (Vite)
 ├── db/                   # Database schema and scripts
 │   └── schema.sql
 ├── notebooks/            # Jupyter notebooks for exploration
@@ -31,18 +31,16 @@ fraud-detection-System/
 
 - **Machine Learning Model**: XGBoost/LightGBM for fraud classification
 - **REST API**: FastAPI for real-time predictions
-- **Streaming Processing**: Kafka integration for real-time transaction processing
-- **Dashboard**: Streamlit-based monitoring and visualization
+- **Transaction Replay**: Replays labeled test transactions into the scoring API
+- **Dashboard**: React-based live monitoring and visualization
 - **Database**: MySQL/PostgreSQL for transaction storage
 - **Docker Support**: Containerized deployment
 
 ## Setup
 
 ### Prerequisites
-- Python 3.8+
-- Docker and Docker Compose
-- MySQL or PostgreSQL
-- Kafka (for streaming features)
+- Python 3.10+
+- Node.js 18+ and npm
 
 ### Installation
 
@@ -79,15 +77,43 @@ python src/train.py
 uvicorn src.api:app --reload
 ```
 
-### Running the Dashboard
+### Running the React Dashboard
+
+Start the API in one terminal:
+
 ```bash
-streamlit run src/dashboard.py
+python -m uvicorn src.api:app --reload --port 8000
 ```
 
+In another terminal, install the frontend dependencies and start Vite:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open the local URL printed by Vite (normally `http://localhost:5173`). The
+dashboard polls the API for health, summary metrics, and recent decisions.
+
 ### Real-time Streaming
+
+This is a small HTTP replay of labeled test transactions to the API (not a
+Kafka consumer). Start the API in one terminal, then in a second terminal run:
+
+```bash
+python -m uvicorn src.api:app --reload --port 8000
+```
+
 ```bash
 python src/stream.py
 ```
+
+The replay sends a balanced sample of 25 fraud-labeled and 25 legitimate
+transactions at half-second intervals by default, ordered by timestamp. It
+includes the highest-amount legitimate example to demonstrate a model flag.
+Labels are demo evaluation metadata and are not model inputs. Keep the React
+dashboard running to watch decisions arrive live.
 
 ## Docker Deployment
 
@@ -97,10 +123,20 @@ docker-compose up -d
 
 ## Model Performance
 
-- Accuracy: [To be added]
-- Precision: [To be added]
-- Recall: [To be added]
-- AUC-ROC: [To be added]
+On the held-out test set (56,746 transactions; 95 fraud cases):
+
+- ROC-AUC: **0.9763**
+- Average precision: **0.8210**
+- Block threshold: precision **0.9125**, recall **0.7684** (73 fraud cases caught,
+  22 missed, 7 legitimate transactions flagged)
+- Review threshold: precision **0.0852**, recall **0.8632** (82 fraud cases
+  caught, 13 missed, 881 legitimate transactions flagged)
+
+Training selects the block and review thresholds on validation data, then
+reports performance on a separate held-out test set. Merchant, device, and IP
+fields are synthetic demo data and are generated independently of fraud labels;
+they are not real signals from the source dataset. Metrics are proof-of-concept
+results, not evidence of production performance.
 
 ## Contributing
 

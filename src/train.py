@@ -18,7 +18,6 @@ import lightgbm as lgb
 import numpy as np
 import pandas as pd
 from sklearn.metrics import (
-    precision_recall_curve,
     precision_score,
     recall_score,
     f1_score,
@@ -27,6 +26,11 @@ from sklearn.metrics import (
     average_precision_score,
 )
 from sklearn.model_selection import train_test_split
+
+if __package__:
+    from .evaluation import select_threshold
+else:
+    from evaluation import select_threshold
 
 # ---------------------------------------------------------------------------
 # Config
@@ -186,39 +190,43 @@ print(f"  -> {fp} legitimate transactions would be wrongly blocked/flagged")
 # precision-recall curve) is the more honest single-number summary here.
 
 # ---------------------------------------------------------------------------
-# 6. Threshold sweep -- find a better operating point than the default 0.5
+# 6. Choose operating thresholds on validation data, not the held-out test set
 # ---------------------------------------------------------------------------
-# LightGBM's raw probability output has no reason to align its "0.5" with
-# what YOUR business considers an acceptable fraud-catch vs. false-positive
-# trade-off. Sweep thresholds and pick one deliberately (feeds your LLD §6
-# decision logic: block / flag / allow thresholds).
-precisions, recalls, thresholds = precision_recall_curve(y_test, y_proba)
+y_val_proba = model.predict_proba(X_val)[:, 1]
+block_threshold, block_target_met = select_threshold(y_val, y_val_proba, 0.90)
+review_threshold, review_target_met = select_threshold(y_val, y_val_proba, 0.10)
+review_threshold = min(review_threshold, block_threshold)
 
-# Example policy: pick the lowest threshold that still keeps precision >= 0.90
-# (i.e. at most 10% of blocked transactions are false positives). Adjust this
-# target to whatever your POC wants to demonstrate.
-target_precision = 0.90
-valid_idx = np.where(precisions[:-1] >= target_precision)[0]
-if len(valid_idx) > 0:
-    chosen_idx = valid_idx[np.argmax(recalls[:-1][valid_idx])]  # max recall among those
-    block_threshold = thresholds[chosen_idx]
-    print(f"\nSuggested BLOCK threshold (precision>={target_precision}): {block_threshold:.4f}")
-    print(f"  -> at this threshold: precision={precisions[chosen_idx]:.4f}, recall={recalls[chosen_idx]:.4f}")
-else:
-    block_threshold = 0.5
-    print(f"\nNo threshold achieves precision>={target_precision}; falling back to 0.5")
+print("\nThresholds selected on validation data:")
+print(f"  BLOCK: {block_threshold:.6f} (minimum precision target: 0.90)")
+print(f"  REVIEW: {review_threshold:.6f} (minimum precision target: 0.10)")
+if not block_target_met:
+    print("WARNING: validation data could not meet the block precision target.")
+if not review_target_met:
+    print("WARNING: validation data could not meet the review precision target.")
 
-# A lower "review" threshold to flag borderline cases for human review,
-# per LLD §6 (block / flag / allow)
-review_threshold = min(max(block_threshold - 0.02, 0.01),
-0.98)
-print(f"Suggested REVIEW/flag threshold: {review_threshold:.4f}")
+# Evaluate both operating points once on the untouched test set.
+y_pred_block = (y_proba >= block_threshold).astype(int)
+y_pred_review = (y_proba >= review_threshold).astype(int)
+precision_chosen = precision_score(y_test, y_pred_block, zero_division=0)
+recall_chosen = recall_score(y_test, y_pred_block, zero_division=0)
+f1_chosen = f1_score(y_test, y_pred_block, zero_division=0)
+precision_review = precision_score(y_test, y_pred_review, zero_division=0)
+recall_review = recall_score(y_test, y_pred_review, zero_division=0)
+f1_review = f1_score(y_test, y_pred_review, zero_division=0)
 
-# Re-evaluate precision/recall/F1 at the chosen block threshold, for the record
-y_pred_chosen = (y_proba >= block_threshold).astype(int)
-precision_chosen = precision_score(y_test, y_pred_chosen)
-recall_chosen = recall_score(y_test, y_pred_chosen)
-f1_chosen = f1_score(y_test, y_pred_chosen)
+tn_block, fp_block, fn_block, tp_block = confusion_matrix(
+    y_test, y_pred_block
+).ravel()
+tn_review, fp_review, fn_review, tp_review = confusion_matrix(
+    y_test, y_pred_review
+).ravel()
+print("\nTEST SET AT BLOCK THRESHOLD")
+print(f"Precision: {precision_chosen:.4f}  Recall: {recall_chosen:.4f}  F1: {f1_chosen:.4f}")
+print(f"TP={tp_block}  FP={fp_block}  TN={tn_block}  FN={fn_block}")
+print("\nTEST SET AT REVIEW THRESHOLD")
+print(f"Precision: {precision_review:.4f}  Recall: {recall_review:.4f}  F1: {f1_review:.4f}")
+print(f"TP={tp_review}  FP={fp_review}  TN={tn_review}  FN={fn_review}")
 
 # ---------------------------------------------------------------------------
 # 7. Feature importance (sanity check -- do the engineered features matter?)
@@ -241,10 +249,15 @@ metrics = {
     "precision": round(precision_chosen, 4),
     "recall": round(recall_chosen, 4),
     "f1": round(f1_chosen, 4),
+    "review_precision": round(precision_review, 4),
+    "review_recall": round(recall_review, 4),
+    "review_f1": round(f1_review, 4),
     "auc_roc": round(auc_roc, 4),
     "average_precision": round(avg_precision, 4),
-    "block_threshold": round(float(block_threshold), 4),
-    "review_threshold": round(float(review_threshold), 4),
+    "block_threshold": block_threshold,
+    "review_threshold": review_threshold,
+    "block_target_precision": 0.90,
+    "review_target_precision": 0.10,
     "updated_at": datetime.now(timezone.utc).isoformat(),
 }
 with open(METRICS_PATH, "w") as f:
