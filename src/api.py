@@ -30,10 +30,12 @@ from typing import Optional
 import joblib
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
+from src.config import settings
 from src.features import BASE_TIMESTAMP
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -205,14 +207,27 @@ def generate_reason(feature_row: pd.DataFrame) -> str:
 # App
 # ---------------------------------------------------------------------------
 app = FastAPI(title="Fraud Detection Scoring API")
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=False,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type"],
+    allow_headers=["Content-Type", "X-API-Key"],
 )
+
+
+def require_api_key(api_key: str | None = Depends(api_key_header)):
+    """Enable optional API-key protection when configured via environment."""
+    if not settings.requires_api_key:
+        return None
+    if api_key != settings.api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+        )
+    return api_key
 
 
 @app.get("/health")
@@ -232,7 +247,7 @@ def health():
 
 
 @app.post("/score", response_model=ScoreResponse)
-def score(txn: Transaction):
+def score(txn: Transaction, _: str | None = Depends(require_api_key)):
     # Fail-open per HLD §7: "Fail-open fallback if the model errors" -- a
     # scoring outage should never silently block legitimate transactions.
     # We still return HTTP 200 with an explicit "allow" + reason, because a
@@ -311,7 +326,7 @@ def _in_memory_summary():
 
 
 @app.get("/decisions/summary")
-def decisions_summary():
+def decisions_summary(_: str | None = Depends(require_api_key)):
     """
     POC implementation using in-memory decisions.
     PostgreSQL can be added later without changing the API contract.
@@ -319,7 +334,7 @@ def decisions_summary():
     return _in_memory_summary()
 
 @app.get("/decisions/recent")
-def recent_decisions(limit: int = 20):
+def recent_decisions(limit: int = 20, _: str | None = Depends(require_api_key)):
     """
     POC implementation using the in-memory decision log.
     """

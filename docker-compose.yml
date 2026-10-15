@@ -1,4 +1,4 @@
-version: '3.8'
+﻿version: '3.8'
 
 services:
   # MySQL Database
@@ -6,10 +6,10 @@ services:
     image: mysql:8.0
     container_name: fraud-detection-db
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: fraud_detection
-      MYSQL_USER: fraud_user
-      MYSQL_PASSWORD: fraud_password
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-change-me}
+      MYSQL_DATABASE: ${DB_NAME:-fraud_detection}
+      MYSQL_USER: ${DB_USER:-fraud_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change-me}
     ports:
       - "3306:3306"
     volumes:
@@ -62,8 +62,9 @@ services:
       mysql:
         condition: service_healthy
     environment:
-      DATABASE_URL: mysql+pymysql://fraud_user:fraud_password@mysql:3306/fraud_detection
+      DATABASE_URL: mysql+pymysql://${DB_USER:-fraud_user}:${DB_PASSWORD:-change-me}@mysql:3306/${DB_NAME:-fraud_detection}
       KAFKA_BROKER: kafka:29092
+      FRAUD_API_KEY: ${FRAUD_API_KEY:-}
     ports:
       - "8000:8000"
     command: uvicorn src.api:app --host 0.0.0.0 --port 8000
@@ -80,7 +81,8 @@ services:
       - mysql
       - api
     environment:
-      DATABASE_URL: mysql+pymysql://fraud_user:fraud_password@mysql:3306/fraud_detection
+      DATABASE_URL: mysql+pymysql://${DB_USER:-fraud_user}:${DB_PASSWORD:-change-me}@mysql:3306/${DB_NAME:-fraud_detection}
+      FRAUD_API_KEY: ${FRAUD_API_KEY:-}
     ports:
       - "8501:8501"
     command: streamlit run src/dashboard.py --server.port=8501 --server.address=0.0.0.0
@@ -97,7 +99,8 @@ services:
       - kafka
     environment:
       KAFKA_BROKER: kafka:29092
-      DATABASE_URL: mysql+pymysql://fraud_user:fraud_password@mysql:3306/fraud_detection
+      DATABASE_URL: mysql+pymysql://${DB_USER:-fraud_user}:${DB_PASSWORD:-change-me}@mysql:3306/${DB_NAME:-fraud_detection}
+      FRAUD_API_KEY: ${FRAUD_API_KEY:-}
     command: python src/stream.py
     networks:
       - fraud-detection-network

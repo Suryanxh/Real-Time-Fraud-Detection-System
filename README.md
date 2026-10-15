@@ -1,151 +1,156 @@
 # Fraud Detection System
 
-A comprehensive fraud detection system using machine learning, real-time streaming, and REST APIs to identify and prevent fraudulent transactions.
+A fraud-detection proof of concept with LightGBM and XGBoost model comparison,
+a FastAPI scoring service, a React monitoring dashboard, and a labeled
+transaction replay. The replay sends HTTP requests to the API; it is not a
+Kafka consumer.
 
-## Project Structure
+## Project structure
 
-```
-fraud-detection-System/
-├── data/
-│   ├── raw/              # Raw transaction data
-│   └── processed/        # Processed and cleaned data
-├── models/               # Trained model artifacts
-├── src/                  # Source code
-│   ├── __init__.py
-│   ├── data_loader.py    # Data loading and preprocessing
-│   ├── features.py       # Feature engineering
-│   ├── train.py          # Model training
-│   ├── api.py            # REST API (FastAPI)
-│   └── stream.py         # Labeled transaction replay into the API (HTTP)
-├── frontend/             # React monitoring dashboard (Vite)
-├── db/                   # Database schema and scripts
-│   └── schema.sql
-├── notebooks/            # Jupyter notebooks for exploration
-├── tests/                # Unit and integration tests
-├── requirements.txt      # Python dependencies
-├── docker-compose.yml    # Docker services configuration
-└── README.md            # This file
-```
-
-## Features
-
-- **Machine Learning Model**: XGBoost/LightGBM for fraud classification
-- **REST API**: FastAPI for real-time predictions
-- **Transaction Replay**: Replays labeled test transactions into the scoring API
-- **Dashboard**: React-based live monitoring and visualization
-- **Database**: MySQL/PostgreSQL for transaction storage
-- **Docker Support**: Containerized deployment
-
-## Setup
-
-### Prerequisites
-- Python 3.10+
-- Node.js 18+ and npm
-
-### Installation
-
-1. Clone the repository
-```bash
-cd fraud-detection-System
+```text
+data/
+  raw/                  Source dataset (not committed)
+  processed/            Train/test and engineered feature CSVs (not committed)
+models/                 Trained models and generated evaluation artifacts
+src/
+  api.py                FastAPI scoring service
+  config.py             Stream and API settings
+  dashboard.py          Optional Streamlit dashboard
+  db.py                 PostgreSQL helper used for optional metric writes
+  evaluation.py         Validation-based threshold selection
+  features.py           Feature engineering
+  stream.py             HTTP replay of labeled test transactions
+  train.py              LightGBM and XGBoost training/evaluation
+frontend/               React dashboard (Vite)
+notebooks/              Exploratory analysis and preprocessing
+tests/                  Pytest tests
+db/schema.sql           PostgreSQL schema
+requirements.txt        Python dependencies
 ```
 
-2. Create virtual environment
-```bash
+## Requirements and setup
+
+- Python 3.10 or newer
+- Node.js 18 or newer and npm (for the React dashboard)
+- The source credit-card dataset at `data/raw/creditcard.csv`
+
+From the repository root, create and activate a virtual environment, then
+install Python dependencies:
+
+```powershell
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 ```
 
-3. Install dependencies
-```bash
-pip install -r requirements.txt
+For preprocessing, run `notebooks/01_eda_preprocessing.ipynb` to create
+`data/processed/X_train.csv`, `X_test.csv`, `y_train.csv`, and `y_test.csv`.
+Update the notebook's project-root path for your checkout if necessary. Then
+run feature engineering from the repository root:
+
+```powershell
+python -m src.features
 ```
 
-4. Configure database
-```bash
-mysql -u root -p < db/schema.sql
+This creates `train_features.csv` and `test_features.csv`, plus the merchant
+risk and feature-statistics files required by the API.
+
+## Train and compare models
+
+Run from the repository root after feature engineering:
+
+```powershell
+python -m src.train
 ```
 
-## Usage
+Training uses the same split and features for both classifiers. It reports
+ROC-AUC, average precision, and confusion matrices on the held-out test set,
+including the default 0.5 threshold and validation-selected block/review
+thresholds. Generated comparison artifacts:
 
-### Training the Model
-```bash
-python src/train.py
-```
+- `models/model_comparison_roc.html` - interactive test-set ROC curves
+- `models/model_comparison_metrics.json` - test metrics and confusion matrices
+- `models/xgboost_fraud_model.pkl` - separately saved XGBoost model
+- `models/lgbm_fraud_model.pkl` and `models/model_metrics.json` - LightGBM
+  model and metrics consumed by the API
 
-### Running the API
-```bash
-uvicorn src.api:app --reload
-```
+The API continues to use LightGBM; XGBoost is trained for offline comparison.
 
-### Running the React Dashboard
+## Run the API and React dashboard
 
-Start the API in one terminal:
+From the repository root, start the API in one terminal:
 
-```bash
+```powershell
 python -m uvicorn src.api:app --reload --port 8000
 ```
 
-In another terminal, install the frontend dependencies and start Vite:
+In a second terminal, start the React dashboard:
 
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite (normally `http://localhost:5173`). The
-dashboard polls the API for health, summary metrics, and recent decisions.
+Open the local Vite URL printed in the terminal, usually
+`http://localhost:5173`. The dashboard polls the API at `http://localhost:8000`.
+Keep both processes running.
 
-### Real-time Streaming
+The optional Streamlit dashboard can also be run from the repository root,
+with the API running:
 
-This is a small HTTP replay of labeled test transactions to the API (not a
-Kafka consumer). Start the API in one terminal, then in a second terminal run:
-
-```bash
-python -m uvicorn src.api:app --reload --port 8000
+```powershell
+python -m streamlit run src/dashboard.py
 ```
 
-```bash
-python src/stream.py
+It normally opens at `http://localhost:8501`.
+
+## Replay sample transactions
+
+Start the API first, then run this from the repository root in another
+terminal:
+
+```powershell
+python -m src.stream
 ```
 
-The replay sends a balanced sample of 25 fraud-labeled and 25 legitimate
-transactions at half-second intervals by default, ordered by timestamp. It
-includes the highest-amount legitimate example to demonstrate a model flag.
-Labels are demo evaluation metadata and are not model inputs. Keep the React
-dashboard running to watch decisions arrive live.
+By default, the replay sends up to 50 transactions (a balanced fraud/legitimate
+demo sample) at 0.5-second intervals. Settings can be changed with
+`STREAM_LIMIT_ROWS`, `STREAM_EVENT_DELAY`, and `FRAUD_API_BASE_URL`. The replay
+sends the historical label only as demo evaluation metadata; it is not used as
+a model input. Keep a dashboard open to view decisions as they arrive.
 
-## Docker Deployment
+## Database and Docker status
 
-```bash
-docker-compose up -d
+The local API keeps decisions in memory; they are cleared when the API process
+restarts. Training also attempts to write metrics to PostgreSQL, but a database
+is not required for local training, scoring, or dashboard use. The schema in
+`db/schema.sql` is PostgreSQL.
+
+Docker Compose is not currently a verified run path: `docker-compose.yml`
+references a `Dockerfile` that is not present in this repository, configures
+MySQL while the checked-in schema is PostgreSQL, and its streaming service
+does not match the documented HTTP replay. Use the local commands above
+instead.
+
+## Tests
+
+Run the project tests from the repository root:
+
+```powershell
+python -m pytest tests -q
 ```
 
-## Model Performance
+## Evaluation snapshot
 
-On the held-out test set (56,746 transactions; 95 fraud cases):
+The latest recorded held-out test comparison (56,746 transactions, 95 fraud
+cases) was:
 
-- ROC-AUC: **0.9763**
-- Average precision: **0.8210**
-- Block threshold: precision **0.9125**, recall **0.7684** (73 fraud cases caught,
-  22 missed, 7 legitimate transactions flagged)
-- Review threshold: precision **0.0852**, recall **0.8632** (82 fraud cases
-  caught, 13 missed, 881 legitimate transactions flagged)
+| Model | ROC-AUC | Average precision | Confusion matrix at 0.5 (`[[TN, FP], [FN, TP]]`) |
+|---|---:|---:|---|
+| LightGBM | 0.9763 | 0.8210 | `[[56643, 8], [22, 73]]` |
+| XGBoost | 0.9693 | 0.8213 | `[[56642, 9], [22, 73]]` |
 
-Training selects the block and review thresholds on validation data, then
-reports performance on a separate held-out test set. Merchant, device, and IP
-fields are synthetic demo data and are generated independently of fraud labels;
-they are not real signals from the source dataset. Metrics are proof-of-concept
-results, not evidence of production performance.
-
-## Contributing
-
-Please read CONTRIBUTING.md for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see LICENSE file for details.
-
-## Contact
-
-For questions or issues, please open an issue in the repository.
+These are proof-of-concept results, not evidence of production performance.
+Merchant, device, and IP fields are synthetic demo data generated independently
+of fraud labels, not real signals from the source dataset.

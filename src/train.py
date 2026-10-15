@@ -1,5 +1,5 @@
 """
-Train a LightGBM binary classifier for fraud detection.
+Train and compare LightGBM and XGBoost binary classifiers for fraud detection.
 
 Handles class imbalance via scale_pos_weight (recommended default -- see
 explanation below). Evaluates with precision, recall, F1, and AUC-ROC, since
@@ -17,6 +17,8 @@ import joblib
 import lightgbm as lgb
 import numpy as np
 import pandas as pd
+import plotly.graph_objects as go
+import xgboost as xgb
 from sklearn.metrics import (
     precision_score,
     recall_score,
@@ -24,6 +26,7 @@ from sklearn.metrics import (
     roc_auc_score,
     confusion_matrix,
     average_precision_score,
+    roc_curve,
 )
 from sklearn.model_selection import train_test_split
 
@@ -40,6 +43,9 @@ TEST_PATH = "data/processed/test_features.csv"
 MODEL_PATH = "models/lgbm_fraud_model.pkl"
 FEATURE_LIST_PATH = "models/feature_columns.json"
 METRICS_PATH = "models/model_metrics.json"
+XGB_MODEL_PATH = "models/xgboost_fraud_model.pkl"
+COMPARISON_METRICS_PATH = "models/model_comparison_metrics.json"
+ROC_CURVE_PATH = "models/model_comparison_roc.html"
 
 # Columns that are identifiers/raw strings/leakage risks, not model inputs.
 # (merchant/device_id/ip are already encoded into merchant_risk_score and the
@@ -150,33 +156,76 @@ if model.best_iteration_ <= 5:
         "below before trusting these metrics."
     )
 
+# Train XGBoost on the same split with the same capped positive-class weight.
+xgb_model = xgb.XGBClassifier(
+    objective="binary:logistic",
+    n_estimators=2000,
+    learning_rate=0.03,
+    max_depth=6,
+    min_child_weight=20,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    reg_lambda=1.0,
+    scale_pos_weight=scale_pos_weight,
+    eval_metric="aucpr",
+    early_stopping_rounds=100,
+    random_state=42,
+    n_jobs=-1,
+    verbosity=0,
+)
+xgb_model.fit(
+    X_train,
+    y_train,
+    eval_set=[(X_val, y_val)],
+    verbose=False,
+)
+print(f"XGBoost best iteration: {xgb_model.best_iteration}")
+
 # ---------------------------------------------------------------------------
 # 5. Evaluate on the held-out test set
 # ---------------------------------------------------------------------------
 y_proba = model.predict_proba(X_test)[:, 1]
+xgb_y_proba = xgb_model.predict_proba(X_test)[:, 1]
 
 # Default 0.5 threshold, for a baseline reading
 y_pred_default = (y_proba >= 0.5).astype(int)
+xgb_y_pred_default = (xgb_y_proba >= 0.5).astype(int)
 
 auc_roc = roc_auc_score(y_test, y_proba)
 avg_precision = average_precision_score(y_test, y_proba)  # area under PR curve
+xgb_auc_roc = roc_auc_score(y_test, xgb_y_proba)
+xgb_avg_precision = average_precision_score(y_test, xgb_y_proba)
 precision_default = precision_score(y_test, y_pred_default)
 recall_default = recall_score(y_test, y_pred_default)
 f1_default = f1_score(y_test, y_pred_default)
 
 print("\n" + "=" * 60)
-print("TEST SET METRICS (threshold = 0.5)")
+print("TEST SET COMPARISON (threshold = 0.5)")
 print("=" * 60)
-print(f"AUC-ROC:              {auc_roc:.4f}")
-print(f"Average Precision:    {avg_precision:.4f}  (area under precision-recall curve)")
-print(f"Precision:            {precision_default:.4f}")
-print(f"Recall:               {recall_default:.4f}")
-print(f"F1:                   {f1_default:.4f}")
+print(f"{'Model':<12} {'ROC-AUC':>9} {'Avg Precision':>15} {'Precision':>11} {'Recall':>9} {'F1':>9}")
+for name, scores, precision, recall, f1 in (
+    ("LightGBM", auc_roc, precision_default, recall_default, f1_default),
+    (
+        "XGBoost",
+        xgb_auc_roc,
+        precision_score(y_test, xgb_y_pred_default, zero_division=0),
+        recall_score(y_test, xgb_y_pred_default, zero_division=0),
+        f1_score(y_test, xgb_y_pred_default, zero_division=0),
+    ),
+):
+    avg_precision_score_value = (
+        avg_precision if name == "LightGBM" else xgb_avg_precision
+    )
+    print(
+        f"{name:<12} {scores:>9.4f} {avg_precision_score_value:>15.4f} "
+        f"{precision:>11.4f} {recall:>9.4f} {f1:>9.4f}"
+    )
 
-tn, fp, fn, tp = confusion_matrix(y_test, y_pred_default).ravel()
-print(f"\nConfusion matrix @ 0.5: TP={tp}  FP={fp}  TN={tn}  FN={fn}")
-print(f"  -> caught {tp}/{tp+fn} fraud cases, missed {fn}")
-print(f"  -> {fp} legitimate transactions would be wrongly blocked/flagged")
+default_confusion = confusion_matrix(y_test, y_pred_default)
+xgb_default_confusion = confusion_matrix(y_test, xgb_y_pred_default)
+print("\nConfusion matrices at threshold = 0.5 (rows: actual, columns: predicted; labels 0, 1):")
+print(f"LightGBM:\n{default_confusion}")
+print(f"XGBoost:\n{xgb_default_confusion}")
 
 # Why AUC-ROC can look fine while precision is unusable: ROC-AUC is measured
 # against the FALSE POSITIVE RATE (FP / total negatives), and with ~200k
@@ -193,21 +242,37 @@ print(f"  -> {fp} legitimate transactions would be wrongly blocked/flagged")
 # 6. Choose operating thresholds on validation data, not the held-out test set
 # ---------------------------------------------------------------------------
 y_val_proba = model.predict_proba(X_val)[:, 1]
+xgb_y_val_proba = xgb_model.predict_proba(X_val)[:, 1]
 block_threshold, block_target_met = select_threshold(y_val, y_val_proba, 0.90)
 review_threshold, review_target_met = select_threshold(y_val, y_val_proba, 0.10)
 review_threshold = min(review_threshold, block_threshold)
+xgb_block_threshold, xgb_block_target_met = select_threshold(
+    y_val, xgb_y_val_proba, 0.90
+)
+xgb_review_threshold, xgb_review_target_met = select_threshold(
+    y_val, xgb_y_val_proba, 0.10
+)
+xgb_review_threshold = min(xgb_review_threshold, xgb_block_threshold)
 
 print("\nThresholds selected on validation data:")
-print(f"  BLOCK: {block_threshold:.6f} (minimum precision target: 0.90)")
-print(f"  REVIEW: {review_threshold:.6f} (minimum precision target: 0.10)")
+print(f"  LightGBM BLOCK:  {block_threshold:.6f} (minimum precision target: 0.90)")
+print(f"  LightGBM REVIEW: {review_threshold:.6f} (minimum precision target: 0.10)")
+print(f"  XGBoost BLOCK:   {xgb_block_threshold:.6f} (minimum precision target: 0.90)")
+print(f"  XGBoost REVIEW:  {xgb_review_threshold:.6f} (minimum precision target: 0.10)")
 if not block_target_met:
     print("WARNING: validation data could not meet the block precision target.")
 if not review_target_met:
     print("WARNING: validation data could not meet the review precision target.")
+if not xgb_block_target_met:
+    print("WARNING: XGBoost validation data could not meet the block precision target.")
+if not xgb_review_target_met:
+    print("WARNING: XGBoost validation data could not meet the review precision target.")
 
 # Evaluate both operating points once on the untouched test set.
 y_pred_block = (y_proba >= block_threshold).astype(int)
 y_pred_review = (y_proba >= review_threshold).astype(int)
+xgb_y_pred_block = (xgb_y_proba >= xgb_block_threshold).astype(int)
+xgb_y_pred_review = (xgb_y_proba >= xgb_review_threshold).astype(int)
 precision_chosen = precision_score(y_test, y_pred_block, zero_division=0)
 recall_chosen = recall_score(y_test, y_pred_block, zero_division=0)
 f1_chosen = f1_score(y_test, y_pred_block, zero_division=0)
@@ -221,12 +286,75 @@ tn_block, fp_block, fn_block, tp_block = confusion_matrix(
 tn_review, fp_review, fn_review, tp_review = confusion_matrix(
     y_test, y_pred_review
 ).ravel()
-print("\nTEST SET AT BLOCK THRESHOLD")
+tn_xgb_block, fp_xgb_block, fn_xgb_block, tp_xgb_block = confusion_matrix(
+    y_test, xgb_y_pred_block
+).ravel()
+tn_xgb_review, fp_xgb_review, fn_xgb_review, tp_xgb_review = confusion_matrix(
+    y_test, xgb_y_pred_review
+).ravel()
+print("\nTEST SET AT VALIDATION-SELECTED BLOCK THRESHOLD")
+print(f"LightGBM threshold={block_threshold:.6f}: TP={tp_block}  FP={fp_block}  TN={tn_block}  FN={fn_block}")
+print(f"XGBoost  threshold={xgb_block_threshold:.6f}: TP={tp_xgb_block}  FP={fp_xgb_block}  TN={tn_xgb_block}  FN={fn_xgb_block}")
+print("\nTEST SET AT VALIDATION-SELECTED REVIEW THRESHOLD")
+print(f"LightGBM threshold={review_threshold:.6f}: TP={tp_review}  FP={fp_review}  TN={tn_review}  FN={fn_review}")
+print(f"XGBoost  threshold={xgb_review_threshold:.6f}: TP={tp_xgb_review}  FP={fp_xgb_review}  TN={tn_xgb_review}  FN={fn_xgb_review}")
+print("\nLightGBM block-threshold metrics")
 print(f"Precision: {precision_chosen:.4f}  Recall: {recall_chosen:.4f}  F1: {f1_chosen:.4f}")
 print(f"TP={tp_block}  FP={fp_block}  TN={tn_block}  FN={fn_block}")
-print("\nTEST SET AT REVIEW THRESHOLD")
+print("\nLightGBM review-threshold metrics")
 print(f"Precision: {precision_review:.4f}  Recall: {recall_review:.4f}  F1: {f1_review:.4f}")
 print(f"TP={tp_review}  FP={fp_review}  TN={tn_review}  FN={fn_review}")
+
+xgb_precision_block = precision_score(y_test, xgb_y_pred_block, zero_division=0)
+xgb_recall_block = recall_score(y_test, xgb_y_pred_block, zero_division=0)
+xgb_f1_block = f1_score(y_test, xgb_y_pred_block, zero_division=0)
+xgb_precision_review = precision_score(y_test, xgb_y_pred_review, zero_division=0)
+xgb_recall_review = recall_score(y_test, xgb_y_pred_review, zero_division=0)
+xgb_f1_review = f1_score(y_test, xgb_y_pred_review, zero_division=0)
+print("\nXGBoost block-threshold metrics")
+print(f"Precision: {xgb_precision_block:.4f}  Recall: {xgb_recall_block:.4f}  F1: {xgb_f1_block:.4f}")
+print("\nXGBoost review-threshold metrics")
+print(f"Precision: {xgb_precision_review:.4f}  Recall: {xgb_recall_review:.4f}  F1: {xgb_f1_review:.4f}")
+
+# Save a test-set ROC curve; ROC-AUC is threshold-independent.
+lgb_fpr, lgb_tpr, _ = roc_curve(y_test, y_proba)
+xgb_fpr, xgb_tpr, _ = roc_curve(y_test, xgb_y_proba)
+roc_figure = go.Figure()
+roc_figure.add_trace(
+    go.Scatter(
+        x=lgb_fpr,
+        y=lgb_tpr,
+        mode="lines",
+        name=f"LightGBM (AUC = {auc_roc:.4f})",
+    )
+)
+roc_figure.add_trace(
+    go.Scatter(
+        x=xgb_fpr,
+        y=xgb_tpr,
+        mode="lines",
+        name=f"XGBoost (AUC = {xgb_auc_roc:.4f})",
+    )
+)
+roc_figure.add_trace(
+    go.Scatter(
+        x=[0, 1],
+        y=[0, 1],
+        mode="lines",
+        name="Random classifier",
+        line={"dash": "dash", "color": "gray"},
+    )
+)
+roc_figure.update_layout(
+    title="LightGBM vs XGBoost - ROC Curve (held-out test set)",
+    xaxis_title="False Positive Rate",
+    yaxis_title="True Positive Rate",
+    xaxis={"range": [0, 1]},
+    yaxis={"range": [0, 1]},
+    legend={"x": 0.62, "y": 0.08},
+)
+roc_figure.write_html(ROC_CURVE_PATH, include_plotlyjs=True)
+print(f"\nROC curve saved to {ROC_CURVE_PATH}")
 
 # ---------------------------------------------------------------------------
 # 7. Feature importance (sanity check -- do the engineered features matter?)
@@ -263,6 +391,44 @@ metrics = {
 with open(METRICS_PATH, "w") as f:
     json.dump(metrics, f, indent=2)
 print(f"Metrics saved to {METRICS_PATH}")
+
+# Keep comparative results separate from model_metrics.json, which is consumed
+# by the API for the production LightGBM model.
+comparison_metrics = {
+    "lightgbm": {
+        "auc_roc": round(auc_roc, 4),
+        "average_precision": round(avg_precision, 4),
+        "confusion_matrix_at_0_5": default_confusion.tolist(),
+        "block_threshold": block_threshold,
+        "block_confusion_matrix": confusion_matrix(
+            y_test, y_pred_block
+        ).tolist(),
+        "review_threshold": review_threshold,
+        "review_confusion_matrix": confusion_matrix(
+            y_test, y_pred_review
+        ).tolist(),
+    },
+    "xgboost": {
+        "auc_roc": round(xgb_auc_roc, 4),
+        "average_precision": round(xgb_avg_precision, 4),
+        "confusion_matrix_at_0_5": xgb_default_confusion.tolist(),
+        "block_threshold": xgb_block_threshold,
+        "block_confusion_matrix": confusion_matrix(
+            y_test, xgb_y_pred_block
+        ).tolist(),
+        "review_threshold": xgb_review_threshold,
+        "review_confusion_matrix": confusion_matrix(
+            y_test, xgb_y_pred_review
+        ).tolist(),
+    },
+    "updated_at": datetime.now(timezone.utc).isoformat(),
+}
+with open(COMPARISON_METRICS_PATH, "w") as f:
+    json.dump(comparison_metrics, f, indent=2)
+print(f"Comparison metrics saved to {COMPARISON_METRICS_PATH}")
+
+joblib.dump(xgb_model, XGB_MODEL_PATH)
+print(f"XGBoost model saved to {XGB_MODEL_PATH}")
 
 # Best-effort: also record this training run in Postgres (LLD §7's
 # model_metrics table), if it's reachable. Training is an offline/batch

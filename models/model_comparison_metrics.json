@@ -1,0 +1,75 @@
+{
+  "lightgbm": {
+    "auc_roc": 0.9763,
+    "average_precision": 0.821,
+    "confusion_matrix_at_0_5": [
+      [
+        56643,
+        8
+      ],
+      [
+        22,
+        73
+      ]
+    ],
+    "block_threshold": 0.6678442043143314,
+    "block_confusion_matrix": [
+      [
+        56644,
+        7
+      ],
+      [
+        22,
+        73
+      ]
+    ],
+    "review_threshold": 0.0010362217419899531,
+    "review_confusion_matrix": [
+      [
+        55770,
+        881
+      ],
+      [
+        13,
+        82
+      ]
+    ]
+  },
+  "xgboost": {
+    "auc_roc": 0.9693,
+    "average_precision": 0.8213,
+    "confusion_matrix_at_0_5": [
+      [
+        56642,
+        9
+      ],
+      [
+        22,
+        73
+      ]
+    ],
+    "block_threshold": 0.9064239859580994,
+    "block_confusion_matrix": [
+      [
+        56650,
+        1
+      ],
+      [
+        26,
+        69
+      ]
+    ],
+    "review_threshold": 0.005302696954458952,
+    "review_confusion_matrix": [
+      [
+        55809,
+        842
+      ],
+      [
+        12,
+        83
+      ]
+    ]
+  },
+  "updated_at": "2026-10-15T06:46:41.578808+00:00"
+}

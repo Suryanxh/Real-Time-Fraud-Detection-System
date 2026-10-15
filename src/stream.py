@@ -27,21 +27,23 @@ from datetime import datetime, timezone
 import pandas as pd
 import requests
 
+from src.config import settings
+
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-TEST_DATA_PATH = "data/processed/test_features.csv"
-API_BASE_URL = "http://localhost:8000"
-SCORE_ENDPOINT = f"{API_BASE_URL}/score"
-HEALTH_ENDPOINT = f"{API_BASE_URL}/health"
+TEST_DATA_PATH = str(settings.data_dir / "processed" / "test_features.csv")
+API_BASE_URL = settings.api_base_url
+SCORE_ENDPOINT = settings.score_endpoint
+HEALTH_ENDPOINT = settings.health_endpoint
 
 # Delay between events (seconds), paced slowly enough to follow in the demo.
-EVENT_DELAY = 0.5
+EVENT_DELAY = settings.event_delay
 
 # Keep the default replay short and balanced for a live demo. Set to None to
 # replay the full test set.
-LIMIT_ROWS = 50
+LIMIT_ROWS = settings.replay_limit
 
 
 # ---------------------------------------------------------------------------
@@ -154,19 +156,27 @@ def load_test_data(limit: int | None = None) -> pd.DataFrame:
 
     # Labels select a representative demo mix only; they are sent as separate
     # evaluation metadata and are not model inputs.
-    fraud_count = min((limit + 1) // 2, int((df["Class"] == 1).sum()))
-    legitimate_count = min(limit - fraud_count, int((df["Class"] == 0).sum()))
-    fraud = df[df["Class"] == 1].sample(n=fraud_count, random_state=42)
-    legitimate_pool = df[df["Class"] == 0]
+    fraud_df = df[df["Class"] == 1]
+    legitimate_df = df[df["Class"] == 0]
+    fraud_count = min(max((limit + 1) // 2, 0), len(fraud_df))
+    legitimate_count = min(max(limit - fraud_count, 0), len(legitimate_df))
+
+    if fraud_count == 0:
+        return legitimate_df.head(limit).sort_values("timestamp").reset_index(drop=True)
+
+    fraud = fraud_df.sample(n=fraud_count, random_state=42)
+    if legitimate_count == 0:
+        return fraud.sort_values("timestamp").reset_index(drop=True)
+
+    legitimate_pool = legitimate_df
     flagged_demo = legitimate_pool.nlargest(1, "Amount")
     other_legitimate = legitimate_pool.drop(index=flagged_demo.index)
+
+    sample_size = max(legitimate_count - len(flagged_demo), 0)
     legitimate = pd.concat(
         [
             flagged_demo,
-            other_legitimate.sample(
-                n=legitimate_count - len(flagged_demo),
-                random_state=42,
-            ),
+            other_legitimate.sample(n=sample_size, random_state=42),
         ]
     )
     return (
